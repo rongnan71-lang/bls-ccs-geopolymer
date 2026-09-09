@@ -40,7 +40,7 @@ class BroadLearningSystem:
             if extra.ndim == 1:
                 extra = extra.reshape(-1, 1)
             feat = np.hstack([Xs, extra * self.scale])
-        n = feat.shape
+        n = feat.shape[1]
         if fit:
             self.We = self.rng.normal(0, 1.0, size=(n, self.n_enhance)).astype(np.float32)
             self.be = self.rng.normal(0, 0.1, size=self.n_enhance).astype(np.float32)
@@ -48,7 +48,7 @@ class BroadLearningSystem:
         return np.hstack([np.ones((len(X), 1)), feat, H])
 
     def _solve(self, A, Y):
-        n_col = A.shape
+        n_col = A.shape[1]
         AtA = A.T @ A + self.reg * np.eye(n_col, dtype=A.dtype)
         self.W = np.linalg.solve(AtA, A.T @ Y)
 
@@ -76,8 +76,8 @@ class BroadLearningSystem:
         将新数据加入缓冲区, 若总样本数超过 buffer_size 则丢弃最旧数据,
         然后用缓冲区中所有数据重新求解岭回归闭式解。
         """
-        X_new = np.asarray(X, dtype=np.float64)
-        y_new = np.asarray(y, dtype=np.float64).reshape(-1, 1)
+        X_new = np.asarray(X_new, dtype=np.float64)
+        y_new = np.asarray(y_new, dtype=np.float64).reshape(-1, 1)
         Y_new = (y_new - self._y_mean) / self._y_std
         A_new = self._build_features(X_new, fit=False)
         self._A_buf = np.vstack([self._A_buf, A_new])
