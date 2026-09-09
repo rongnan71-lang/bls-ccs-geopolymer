@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
-"""抗遗忘实验 v1.1 — CCS身份保持 vs BLS读出漂移 (口径明确区分)."""
+"""Prototype retention and sequential updating experiment.
+
+A. CCS记忆层: 记录级身份保持 — 早期文献的记录在全部文献到达后是否仍可被检索。
+B. BLS增量: 统计拟合漂移 — 早期数据的MAE在逐批加入新文献后如何变化。
+
+注意: 本实验是retention/replay实验, 不是严格的online learning benchmark。
+CCS的embedding normalization在全数据集上预先计算(用于统一检索空间),
+BLS的normalization在每个fit/add_data时独立计算。两者度量不同维度的"遗忘"。
+"""
 import os
 import sys
 import numpy as np
@@ -74,10 +82,11 @@ def main():
     sources = df["source"].unique()
     print(f"数据集: {len(df)}行, {len(sources)}源")
     print(f"早期知识 = 首篇 [{sources[0][:50]}], {len(df[df['source']==sources[0]])}组")
-
-    report = ["=== 抗遗忘实验 (流式: 文献源逐批到达) ===",
+    report = ["=== Prototype Retention and Sequential Updating Experiment ===",
               f"早期知识 = 首篇 [{sources[0][:50]}]",
-              f"后续到达 {len(sources)-1} 篇, 共 {len(df)} 组", ""]
+              f"后续到达 {len(sources)-1} 篇, 共 {len(df)} 组",
+              "注: 本实验为retention/replay实验, CCS embedding normalization在全数据集预先计算",
+              ""]
     print("\nA. CCS记忆层...")
     res_a = run_ccs_memory(df)
     report += ["A. CCS记忆层 (身份保持 — 检索命中率):",
@@ -85,7 +94,6 @@ def main():
                f"   早期 {res_a['n_early']}组带噪({int(res_a['noise']*100)}%)精确找回率 = "
                f"{res_a['hits']}/{res_a['n_early']} = {res_a['hit_rate']*100:.0f}%"]
     print(f"   找回率: {res_a['hits']}/{res_a['n_early']}={res_a['hit_rate']*100:.0f}%")
-
     print("\nB. BLS增量...")
     res_b = run_bls_drift(df, "ucs_kpa")
     report += ["", "B. 纯BLS增量 (统计拟合 — 早期数据MAE漂移):",
@@ -93,11 +101,9 @@ def main():
                f"全部到齐后 {res_b['mae_late']:.1f}kPa "
                f"(漂移 +{res_b['drift']:.1f}, +{res_b['drift_pct']:.0f}%)"]
     print(f"   MAE: {res_b['mae_early']:.1f}→{res_b['mae_late']:.1f}kPa")
-
     report += ["", "解读: CCS节点级记忆是'身份保持'(查得到原始记录);",
                "BLS读出层是'统计拟合'(新数据必然重分配权重)。",
                "两者度量不同维度的'遗忘', 不是替代关系 — 记忆层负责可追溯, 回归层负责插值。"]
-
     report_text = "\n".join(report)
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:

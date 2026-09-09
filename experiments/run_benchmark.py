@@ -61,7 +61,6 @@ def run_loso(df, target):
 
 
 def paired_significance(fold_r2, model_a, model_b, label_a, label_b):
-    """Paired t-test + Wilcoxon signed-rank test."""
     a = np.array(fold_r2[model_a])
     b = np.array(fold_r2[model_b])
     diff = b - a
@@ -74,11 +73,9 @@ def paired_significance(fold_r2, model_a, model_b, label_a, label_b):
         w_stat, w_p = stats.wilcoxon(b, a)
     except ValueError:
         w_stat, w_p = float('nan'), float('nan')
-    return {
-        "n": n, "mean_diff": mean_diff, "std_diff": std_diff,
-        "ci95_low": ci95[0], "ci95_high": ci95[1],
-        "t_stat": t_stat, "t_p": t_p, "w_stat": w_stat, "w_p": w_p,
-    }
+    return {"n": n, "mean_diff": mean_diff, "std_diff": std_diff,
+            "ci95_low": ci95[0], "ci95_high": ci95[1],
+            "t_stat": t_stat, "t_p": t_p, "w_stat": w_stat, "w_p": w_p}
 
 
 def main():
@@ -87,10 +84,8 @@ def main():
         sys.exit(1)
     df = pd.read_csv(DATA_PATH)
     print(f"数据集: {len(df)}行, {df['source'].nunique()}源, 特征维度: {load_xy(df,'ucs_kpa')[0].shape[1]}")
-
     report = [f"=== 基准对照 v1.3 (n={len(df)}, 源={df['source'].nunique()}, 模型=9) ===",
               "协议: 5折×3种子 + LOSO; 折内拟合; in-sample residual; 原型基于残差; shrinkage内层CV; 种子固定", ""]
-
     for target, label in [("ucs_kpa", "UCS 抗压强度(kPa)"), ("neg_log10_k", "-log10(k) 渗透")]:
         print(f"\n--- {label} ---")
         report.append(f"--- 目标: {label} ---")
@@ -101,7 +96,6 @@ def main():
             marker = " ★" if m in ["RBF图增强BLS", "GBDT+BLS残差校正", "Stacking(BLS+GBDT+GP)"] else ""
             report.append(f"  {m:<22} R²={r2:+.3f}±{r2s:.3f}  MAE={mae:.3f}±{maes:.3f}{marker}")
             print(f"  {m}: R²={r2:.3f}")
-
         sig = paired_significance(fold_r2, "GBDT", "GBDT+BLS残差校正", "GBDT", "GBDT+BLS")
         report.append("")
         report.append("[Paired显著性检验: GBDT+BLS残差校正 vs GBDT]")
@@ -111,7 +105,6 @@ def main():
         sig_label = "显著(p<0.05)" if sig['t_p'] < 0.05 else "不显著(p≥0.05)"
         report.append(f"  结论: {sig_label}")
         print(f"  ΔR²={sig['mean_diff']:+.4f}, t-test p={sig['t_p']:.4f}, Wilcoxon p={sig['w_p']:.4f}")
-
         loso_results, _ = run_loso(df, target)
         report.append("")
         report.append("[留一文献 LOSO R²]")
@@ -119,7 +112,6 @@ def main():
             r2, r2s = loso_results[m]
             report.append(f"  {m:<22} R²={r2:+.3f}±{r2s:.3f}")
         report.append("")
-
     report_text = "\n".join(report)
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
